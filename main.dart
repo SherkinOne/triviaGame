@@ -1,6 +1,7 @@
- import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import "package:pull_to_refresh/pull_to_refresh.dart";
 import 'package:http/http.dart' as http;
 
 void main() => runApp(MyApp());
@@ -8,8 +9,10 @@ void main() => runApp(MyApp());
 class MyApp extends StatelessWidget {  
   MyApp({Key key, this.questions}) : super(key: key);
   final String questions;
-  int nos;
+  var no;
+  bool isSaved;
   @override
+  
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Trivia....',
@@ -18,59 +21,91 @@ class MyApp extends StatelessWidget {
       ),
       home: Scaffold(
         appBar: AppBar(
-          title: Text('The trivia app'),
+          title: Text('Pub Quiz Questions'),
+          centerTitle: true,
         ),
-        body:  Container (
-    //      child : ListView.builder(
- // itemBuilder: (context, index) {
-    child : FutureBuilder(
-     future: _getQuestion(), //sets the getQuote method as the expected Future
+        
+        body:   Container (
+          child : FutureBuilder(
+          future: _getQuestion(), //sets the getQuote method as the expected Future
             builder: (BuildContext context, AsyncSnapshot snapshot) {    
             if (snapshot.hasError) {
               return Text('Error: ${snapshot.error}');
             } else {  
-              if (snapshot.hasData){
-               
-              return ListView.builder(               
+              if (snapshot.hasData){          
+              return  new SmartRefresher(
+                    enablePullDown: true,
+                    enablePullUp: false,
+                    controller : RefreshController(),
+                child : ListView.builder(               
                 itemCount : snapshot.data.length,
+                scrollDirection: Axis.vertical, 
                 itemBuilder :(BuildContext context, int index){
-                      nos=index+1;  // This is the number displayed
-                  return ListTile(
-                        title : Text(nos.toString()+". "+snapshot.data[index].question),
-                       // subtitle : Text(snapshot.data[index].answer)
-                      onTap :(){
-                            // Load fill page with answer
-                            Navigator.push(context, 
-                            new MaterialPageRoute(
-                              builder : (context) => AnswerPage(snapshot.data[index])
-                              ));
-                      }
-                  );
-                }
-                                 
+                   no=index+1;
+                  return ExpansionTile(              
+                    title: Text("${no}. "+snapshot.data[index].question, style: TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold, fontStyle: FontStyle.italic),),
+                     children: <Widget>[
+                      Column(
+                        children: _buildExpandableContent(snapshot.data[index]),
+                        
+              )]                             
               );
             }
+            ));
+              }
             else {
-              // run cirlcy thinng
-              CircularProgressIndicator();
-            }}
-      } )
-    )
-        
+             return Center(
+               child : CircularProgressIndicator()
+             );
+            }
+      }}     
       )
+     ))
+    );
+    }}
+
+      _buildExpandableContent(Questions questions) {
+        // This is the expandable part of the tile that shows the answer
+    List<Widget> columnContent = [];
+      columnContent.add(
+        ListTile(
+          title: Text(questions.answer, style: TextStyle(fontSize: 18.0),),
+        // need a star which add to a saved list (maybe offline??)
+         
+      ));
+
+            columnContent.add(
+              IconButton(
+                icon : Icon(Icons.save),
+                onPressed : saveQuestion()
+        )
       );
-      }}
+    return columnContent;
+  }
+
+loadQuestionList(){
+
+  
+}
+
+  saveQuestion(){
+      // save the question to firebase
+      // can be accessible by the other page
+    return;
+  }
 
   Future<List<Questions>> _getQuestion() async {
-    String url = 'http://jservice.io/api/random?count=4';
-    //String url = 'https://quotes.rest/qod.json';
+    String url = 'http://jservice.io/api/random?count=20';
+
     final response =
         await http.get(url, headers: {"Accept": "application/json"});
+    
     if (response.statusCode == 200) {
       var theQuestions = jsonDecode(response.body);
+      print(response.body);
       List<Questions> quest = [];   
         for (var q in theQuestions){
-          Questions questi = Questions(q['question'], q["answer"]);
+          Questions questi = Questions(q['question'], q["answer"],false);
           quest.add(questi);
         }
       return quest;
@@ -81,73 +116,14 @@ class MyApp extends StatelessWidget {
   
 
 class Questions {
-  Questions(this.question, this.answer);
+  Questions(this.question, this.answer, this.saved);
 
   String question;
   String answer;
+  bool saved;
 
   Questions.fromJson(List <dynamic> json) :
        question = 'question',
-        answer = 'answer';
-}
-
-
-// This is my new page
-
-class AnswerPage extends StatelessWidget {
-// it passing over an array
-  AnswerPage(this.questa);
-  final Questions questa;
-
-  @override
-  Widget build (BuildContext context){
-    return Scaffold(
-      appBar: AppBar(
-        brightness: Brightness.light,
-        leading: IconButton(
-          icon: Icon(Icons.menu),
-          onPressed: () {
-            print('Menu button');
-          },
-        ),
-       title: Text(questa.question)
-        // title: Text(this.questa.question),
-   
-      ),
-      body: new Container(
-        color: Colors.white,
-     
-       child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                 Text(               
-                    questa.question, 
-                    style : TextStyle (color: Colors.blue, fontWeight : FontWeight.bold )
-                  ),
-                  SizedBox(height: 28.0),
-                  Text(
-                    questa.answer
-                  ),
-                  Text (
-                    "sdfdsf",
-                    style : TextStyle (height : 10),  // This is line height
-                    
-                  ),
-                   new InkWell(
-          onTap: () {
-            Navigator.pushNamed(context, "YourRoute");
-          },
-          child: new Padding(
-            padding: new EdgeInsets.all(10.0),
-            child: new Text("Tap Here"),
-          ),
-        )
-                ],
-              ),
-        
-      ),
-      );
-    
-     // body: Text (this.questions),
-  }
+        answer = 'answer',
+        saved = false;
 }
