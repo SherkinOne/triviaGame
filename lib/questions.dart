@@ -13,7 +13,7 @@ class MyApp extends StatelessWidget {
       title: 'Pub Quiz',
       routes: {
         '/': (context) => QuestionsPage(title: 'Pub Quiz Questions'),
-        '/saved': (context) => SavedPage(title: 'Saved Questions'),
+        '/saved': (context) => SavedPage(title: 'Saved Questions', ),
       },
       theme: ThemeData(
         primarySwatch: Colors.blue,
@@ -25,16 +25,17 @@ class MyApp extends StatelessWidget {
 class QuestionsPage extends StatefulWidget {
   QuestionsPage({Key key, this.title}) : super(key: key);
   final String title;
-
+List<SavedQuestions> savedQuests = new List<SavedQuestions>();
   List questions = [];
   @override
   _QuestionsPage createState() => _QuestionsPage();
 }
 
 class _QuestionsPage extends State<QuestionsPage> {
-  var savedQuestions;
+  // var savedQuestions;
   int _selectedIndex = 0;
   var x = 0;
+ // List<SavedQuestions> savedQuests = new List<SavedQuestions>();
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -54,8 +55,8 @@ class _QuestionsPage extends State<QuestionsPage> {
             ]),
         body: Container(
             child: FutureBuilder(
-                future:
-                    _getQuestion(_selectedIndex), //sets the getQuestions method as the expected Future
+                future: _getQuestion(
+                    _selectedIndex), //sets the getQuestions method as the expected Future
                 builder: (BuildContext context, AsyncSnapshot snapshot) {
                   if (snapshot.hasError) {
                     return Text('Error: ${snapshot.error}');
@@ -65,10 +66,11 @@ class _QuestionsPage extends State<QuestionsPage> {
                           // could call function that changes state relative to the parameter passed??
                           onRefresh: () async {
                             //async needed else whirly circle stays
-                            if ( _selectedIndex ==0 ) setState(() {
-                              // _getQuestion();
-                              return;
-                            });
+                            if (_selectedIndex == 0)
+                              setState(() {
+                                // _getQuestion();
+                                return;
+                              });
                           },
                           child: ListView.builder(
                               itemCount: snapshot.data.length,
@@ -100,8 +102,7 @@ class _QuestionsPage extends State<QuestionsPage> {
   void _onItemTapped(int index) {
     _selectedIndex = index;
     if (index == 1) {
-      Navigator.pushNamed(context, '/saved');
-    }
+      Navigator.pushNamed(context, '/saved');    }
   }
 
   _buildExpandableContent(Questions questions) {
@@ -126,23 +127,24 @@ loadQuestionList() {}
 
 Future<List<Questions>> _getQuestion(int theIndex) async {
   print(theIndex);
-  if (theIndex==0) {
-  String url = 'http://jservice.io/api/random?count=20';
+  if (theIndex == 0) {
+    String url = 'http://jservice.io/api/random?count=20';
 
-  final response = await http.get(url, headers: {"Accept": "application/json"});
+    final response =
+        await http.get(url, headers: {"Accept": "application/json"});
 
-  if (response.statusCode == 200) {
-    var theQuestions = jsonDecode(response.body);
-    print(response.body);
-    List<Questions> quest = [];
-    for (var q in theQuestions) {
-      Questions questi = Questions(q['question'], q["answer"], false);
-      quest.add(questi);
+    if (response.statusCode == 200) {
+      var theQuestions = jsonDecode(response.body);
+      print(response.body);
+      List<Questions> quest = [];
+      for (var q in theQuestions) {
+        Questions questi = Questions(q['question'], q["answer"], false);
+        quest.add(questi);
+      }
+      return quest;
+    } else {
+      throw Exception('Failed to load post');
     }
-    return quest;
-  } else {
-    throw Exception('Failed to load post');
-  }
   }
   return [];
 }
@@ -161,14 +163,12 @@ class Questions {
 }
 
 class SavedQuestions {
+
   SavedQuestions(this.question, this.answer);
 
   String question;
   String answer;
-
-  static get length => null;
-
-
+   
 }
 
 class TapboxA extends StatefulWidget {
@@ -181,17 +181,22 @@ class TapboxA extends StatefulWidget {
 
 class _TapboxAState extends State<TapboxA> {
   bool savedOrNot = false;
-
+  
   _handleTap() {
     setState(() {
       print(savedOrNot);
-      savedOrNot = !savedOrNot;
+  
       if (!savedOrNot) {
         print(widget.theQuestion);
-       // SavedQuestions.add(widget.theQuestion, widget.theQuestion)
+        SavedQuestions quest = new SavedQuestions(widget.theQuestion, widget.theAnswer);
+      
+        List<SavedQuestions> ques = new List<SavedQuestions>();
+        print(ques.length);
+        print(quest);
         // save to other class
         // or maybe save direct to firebase
       }
+      savedOrNot = !savedOrNot;
     });
   }
 
