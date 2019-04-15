@@ -3,6 +3,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'second.dart';
+import 'package:sqflite/sqflite.dart';
+import 'package:path_provider/path_provider.dart';
+import 'data.dart';
 
 void main() => runApp(MyApp());
 
@@ -13,7 +16,9 @@ class MyApp extends StatelessWidget {
       title: 'Pub Quiz',
       routes: {
         '/': (context) => QuestionsPage(title: 'Pub Quiz Questions'),
-        '/saved': (context) => SavedPage(title: 'Saved Questions', ),
+        '/saved': (context) => SavedPage(
+              title: 'Saved Questions',
+            ),
       },
       theme: ThemeData(
         primarySwatch: Colors.blue,
@@ -25,7 +30,7 @@ class MyApp extends StatelessWidget {
 class QuestionsPage extends StatefulWidget {
   QuestionsPage({Key key, this.title}) : super(key: key);
   final String title;
-List<SavedQuestions> savedQuests = new List<SavedQuestions>();
+  final dbHelper = DatabaseHelper.instance;
   List questions = [];
   @override
   _QuestionsPage createState() => _QuestionsPage();
@@ -35,7 +40,7 @@ class _QuestionsPage extends State<QuestionsPage> {
   // var savedQuestions;
   int _selectedIndex = 0;
   var x = 0;
- // List<SavedQuestions> savedQuests = new List<SavedQuestions>();
+  final dbHelper = DatabaseHelper.instance;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -102,7 +107,8 @@ class _QuestionsPage extends State<QuestionsPage> {
   void _onItemTapped(int index) {
     _selectedIndex = index;
     if (index == 1) {
-      Navigator.pushNamed(context, '/saved');    }
+      Navigator.pushNamed(context, '/saved');
+    }
   }
 
   _buildExpandableContent(Questions questions) {
@@ -123,8 +129,6 @@ class _QuestionsPage extends State<QuestionsPage> {
   }
 }
 
-loadQuestionList() {}
-
 Future<List<Questions>> _getQuestion(int theIndex) async {
   print(theIndex);
   if (theIndex == 0) {
@@ -138,8 +142,8 @@ Future<List<Questions>> _getQuestion(int theIndex) async {
       print(response.body);
       List<Questions> quest = [];
       for (var q in theQuestions) {
-        Questions questi = Questions(q['question'], q["answer"], false);
-        quest.add(questi);
+        Questions question = Questions(q['question'], q["answer"], false);
+        quest.add(question);
       }
       return quest;
     } else {
@@ -162,15 +166,6 @@ class Questions {
         saved = false;
 }
 
-class SavedQuestions {
-
-  SavedQuestions(this.question, this.answer);
-
-  String question;
-  String answer;
-   
-}
-
 class TapboxA extends StatefulWidget {
   TapboxA({Key key, this.theQuestion, this.theAnswer}) : super(key: key);
   final String theQuestion;
@@ -181,26 +176,21 @@ class TapboxA extends StatefulWidget {
 
 class _TapboxAState extends State<TapboxA> {
   bool savedOrNot = false;
-  
+
   _handleTap() {
     setState(() {
       print(savedOrNot);
-  
       if (!savedOrNot) {
         print(widget.theQuestion);
-        SavedQuestions quest = new SavedQuestions(widget.theQuestion, widget.theAnswer);
-      
-        List<SavedQuestions> ques = new List<SavedQuestions>();
-        print(ques.length);
-        print(quest);
-        // save to other class
-        // or maybe save direct to firebase
+
+        _insert(widget.theQuestion, widget.theAnswer);
       }
       savedOrNot = !savedOrNot;
     });
   }
 
   Widget build(BuildContext context) {
+    // This star should be changed if in saved mode
     return IconButton(
       icon: Icon(Icons.star),
       color: savedOrNot ? Colors.red : Colors.green,
@@ -208,5 +198,16 @@ class _TapboxAState extends State<TapboxA> {
       highlightColor: Colors.yellow,
       onPressed: _handleTap,
     );
+  }
+
+  void _insert(q, a) async {
+    final dbHelper = DatabaseHelper.instance;
+    // row to insert
+    Map<String, dynamic> row = {
+      DatabaseHelper.columnQuestion: q,
+      DatabaseHelper.columnAnswer: a
+    };
+    await dbHelper.insert(row);
+  
   }
 }

@@ -35,6 +35,7 @@ class _MyHomePageState extends State<MyHomePage>
     with SingleTickerProviderStateMixin {
   AnimationController animationController;
   var savedQuestions;
+  var change=0.02;
   List theColors = ['Colors.red', 'Colors.Yellow'];
   @override
   Widget build(BuildContext context) {
@@ -49,9 +50,11 @@ class _MyHomePageState extends State<MyHomePage>
             child: new AnimatedBuilder(
                 animation: animationController,
                 builder: (BuildContext context, Widget _widget) {
-                  widget.x = widget.x + 0.02;
+                  widget.x = widget.x + change;
                   print(widget.x);
-                  if (widget.x > 6.28) animationController.stop();
+                  if (widget.x > 6.28) {
+                    animationController.stop();
+                    change=0;};
                   return Transform.rotate(
                       angle: widget.x,
                       child: Container(
