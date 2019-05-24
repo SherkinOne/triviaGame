@@ -1,7 +1,5 @@
-import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'questions.dart';
 
 void main() => runApp(MyApp());
 
@@ -10,10 +8,13 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Pub Quiz',
+      routes: {
+        '/': (context) => MyHomePage(title: 'Pub Quiz Questions'),
+        '/questions': (context) => QuestionsPage(title: 'Pub Quiz Questions'),
+      },
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: MyHomePage(title: 'Pub Quiz Questions'),
     );
   }
 }
@@ -21,156 +22,81 @@ class MyApp extends StatelessWidget {
 class MyHomePage extends StatefulWidget {
   MyHomePage({Key key, this.title}) : super(key: key);
   final String title;
+  double x = 0;
   List questions = [];
   @override
   _MyHomePageState createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _MyHomePageState extends State<MyHomePage>
+    with SingleTickerProviderStateMixin {
+  AnimationController animationController;
   var savedQuestions;
-  var x = 0;
+  var change=0.02;
+  List theColors = ['Colors.red', 'Colors.Yellow'];
   @override
   Widget build(BuildContext context) {
+    //  if (widget.x == Null) widget.x = 0;
     return Scaffold(
         appBar: AppBar(
             backgroundColor: Colors.deepPurple[300],
             centerTitle: true,
             title: (Text(widget.title))),
         body: Container(
-            child: FutureBuilder(
-                future:
-                    _getQuestion(), //sets the getQuestions method as the expected Future
-                builder: (BuildContext context, AsyncSnapshot snapshot) {
-                  if (snapshot.hasError) {
-                    return Text('Error: ${snapshot.error}');
-                  } else {
-                    if (snapshot.hasData) {
-                      return RefreshIndicator(
-                          // could call function that changes state relative to the parameter passed??
-                          onRefresh: () async {
-                            //async needed else whirly circle stays
-                            setState(() {
-                              // _getQuestion();
-                              return;
-                            });
+            color: Colors.blueGrey[100],
+            child: new AnimatedBuilder(
+                animation: animationController,
+                builder: (BuildContext context, Widget _widget) {
+                  widget.x = widget.x + change;
+                  print(widget.x);
+                  if (widget.x > 6.28) {
+                    animationController.stop();
+                    change=0;}
+                  return Transform.rotate(
+                      angle: widget.x,
+                      child: Container(
+                          child: Center(
+                        child: FlatButton(
+                          child: Text(
+                            'Pub Quiz',
+
+                            // thios needs to be reltive to media size
+                            textScaleFactor: widget.x * 0.75,
+                            style: TextStyle(
+                                fontStyle: FontStyle.italic,
+                                color: _changeColor(widget.x)),
+                          ),
+                          onPressed: () {
+                            Navigator.pushNamed(context, '/questions');
                           },
-                          child: ListView.builder(
-                              itemCount: snapshot.data.length,
-                              scrollDirection: Axis.vertical,
-                              itemBuilder: (BuildContext context, int index) {
-                                var no = index + 1;
-                                return ExpansionTile(
-                                    title: Text(
-                                      "$no. " + snapshot.data[index].question,
-                                      style: TextStyle(
-                                          fontSize: 20.0,
-                                          fontWeight: FontWeight.bold,
-                                          fontStyle: FontStyle.italic),
-                                    ),
-                                    children: <Widget>[
-                                      Column(
-                                        children: _buildExpandableContent(
-                                            snapshot.data[index]),
-                                      )
-                                    ]);
-                              }));
-                    } else {
-                      return Center(child: CircularProgressIndicator());
-                    }
-                  }
+                        ),
+                      )));
                 })));
   }
 
-  _buildExpandableContent(Questions questions) {
-    /// This is the expandable part of the tile that shows the answer
-    List<Widget> columnContent = [];
-
-    columnContent.add(ListTile(
-      title: Text(
-        questions.answer,
-        style: TextStyle(fontSize: 18.0),
-      ),
-    ));
-    columnContent.add(
-      TapboxA(theQuestion: questions.question, theAnswer: questions.answer),
-    );
-
-    return columnContent;
-  }
-}
-
-loadQuestionList() {}
-
-Future<List<Questions>> _getQuestion() async {
-  String url = 'http://jservice.io/api/random?count=20';
-
-  final response = await http.get(url, headers: {"Accept": "application/json"});
-
-  if (response.statusCode == 200) {
-    var theQuestions = jsonDecode(response.body);
-    print(response.body);
-    List<Questions> quest = [];
-    for (var q in theQuestions) {
-      Questions questi = Questions(q['question'], q["answer"], false);
-      quest.add(questi);
-    }
-    return quest;
-  } else {
-    throw Exception('Failed to load post');
-  }
-}
-
-class Questions {
-  Questions(this.question, this.answer, this.saved);
-
-  String question;
-  String answer;
-  bool saved;
-
-  Questions.fromJson(List<dynamic> json)
-      : question = 'question',
-        answer = 'answer',
-        saved = false;
-}
-
-class SavedQuestions {
-  SavedQuestions(this.question, this.answer);
-
-  String question;
-  String answer;
-}
-
-class TapboxA extends StatefulWidget {
-  TapboxA({Key key, this.theQuestion, this.theAnswer}) : super(key: key);
-  final String theQuestion;
-  final String theAnswer;
   @override
-  _TapboxAState createState() => _TapboxAState();
-}
-
-class _TapboxAState extends State<TapboxA> {
-  bool savedOrNot = false;
-
-  _handleTap() {
-    setState(() {
-      print(savedOrNot);
-      savedOrNot = !savedOrNot;
-      if (!savedOrNot){
-      print(widget.theQuestion);
-      // save to other class
-      // or maybe save direct to firebase
-      }
-
-    });
+  void initState() {
+    super.initState();
+    animationController = new AnimationController(
+      vsync: this,
+      duration: new Duration(milliseconds: 1),
+    );
+    animationController.repeat();
   }
 
-  Widget build(BuildContext context) {
-    return IconButton(
-      icon: Icon(Icons.star),
-      color: savedOrNot ? Colors.red : Colors.green,
-      splashColor: Colors.green,
-      highlightColor: Colors.yellow,
-      onPressed: _handleTap,
-    );
+  @override
+  void dispose() {
+    animationController.dispose();
+    super.dispose();
+  }
+
+  _changeColor(x) {
+    if (x > 6) return Color.fromRGBO(55, 62, 162, 1);
+    if (x > 5) return Color.fromRGBO(55, 62, 162, 0.9);
+    if (x > 4) return Color.fromRGBO(55, 62, 162, 0.8);
+    if (x > 3) return Color.fromRGBO(55, 62, 162, 0.7);
+    if (x > 2) return Color.fromRGBO(55, 62, 162, 0.6);
+    if (x > 1) return Color.fromRGBO(55, 62, 162, 0.5);
+    if (x > 0) return Color.fromRGBO(55, 62, 162, 0.4);
   }
 }
